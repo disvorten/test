@@ -2,23 +2,27 @@ import requests
 import click
 import xml.etree.ElementTree as ET
 
+from requests import HTTPError
+
 
 def currency_rates(code, date):
+    value, name = None, None
     url = 'https://www.cbr.ru/scripts/XML_daily.asp'
-    response = requests.get(f'{url}?date_req={date}')
+    try:
+        response = requests.get(f'{url}?date_req={date}')
+        response.raise_for_status()
+    except HTTPError as http_err:
+        return -1, http_err
+    except Exception as err:
+        return -1, err
     resp_xml_content = response.content.decode('windows-1251')
-    with open('test.xml', 'w') as f:
-        f.write(resp_xml_content)
-    root_node = ET.parse('test.xml').getroot()
+    root_node = ET.fromstring(resp_xml_content)
     for tag in root_node.findall('Valute'):
-        flag = 0
-        for elem in tag:
-            if elem.tag == 'CharCode' and elem.text == code:
-                flag = 1
-            if elem.tag == 'Value' and flag == 1:
-                value = elem.text
-            if elem.tag == 'Name' and flag == 1:
-                name = elem.text
+        if tag[1].text == code:
+            value = tag[-1].text
+            name = tag[-2].text
+    if not value:
+        return -3, 0
     return value, name
 
 
@@ -31,7 +35,14 @@ def main(code, date):
     for i in range(2, len(mas) + 1):
         new_date = f'{new_date}/{mas[-i]}'
     result = currency_rates(code, new_date)
-    print(f"{code} ({result[1]}): {result[0]}")
+    if result[0] == -1:
+        print(f'HTTP error occurred: {result[1]}')
+    elif result[0] == -2:
+        print(f'Other error occurred: {result[1]}')
+    elif result[0] == -3:
+        print(f'Incorrect name of code')
+    else:
+        print(f"{code} ({result[1]}): {result[0]}")
 
 
 if __name__ == '__main__':
