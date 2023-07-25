@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
 class Test(unittest.TestCase):
     def test_change_data(self):
-        answer = '2022/10/08'
+        answer = '08/10/2022'
         incoming_data = '2022-10-08'
         self.assertEqual(answer, Change_date(incoming_data))
 
